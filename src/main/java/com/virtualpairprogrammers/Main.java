@@ -50,19 +50,30 @@ public class Main {
 	     * JavaRDD impleneted in Scala itself and it is bridge between Scala and 
 	     */
 	    JavaRDD<Integer> myRdd =   sc.parallelize(inputData);
+	   // myRdd.foreach(System.out::println);
 	    
 	    /*
 	     * Mapper
 	     */
-	    JavaRDD<Double> sqrtRdd = myRdd.map(value->Math.sqrt(value));
-	    
+	    JavaRDD<Double> sqrtRdd = myRdd.map(value->Math.sqrt(value)); 
 	    
 	    /*
 	     * Reducer
 	     */
 	    Double result = sqrtRdd.reduce((v1,v2)->v1+v2); 
+	    
+	    /*
+	     * Printing the RDD contents
+	     * Not Recommended
+	     */
+	    sqrtRdd.foreach(value->System.out.println(value));
+	    
+	    /*
+	     * Counting the RDD
+	     */
+	    Long numberOfElement =sqrtRdd.count();
 
-	    System.out.println(result );
+	    System.out.println(numberOfElement );
 	    
 	    sc.close();
 	   
