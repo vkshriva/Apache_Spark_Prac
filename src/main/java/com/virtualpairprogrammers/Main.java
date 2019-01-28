@@ -9,8 +9,19 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 
+import scala.Tuple2;
+
 public class Main {
 
+	/*Let there is scenario where you want to keep inputData  and its corresponding sqrt in 1 RDD
+	 * 1 Solution will be create your class and push the data as below
+	 * 
+	 * JavaRDD<MyClass> rdd = myRdd.map(value-> new MyClass(value,Math.sqrt(value)))
+	 * 
+	 * But Instead of this you can use Tupple of Scala wheras in Java it gives you some Class to deal with 
+	 * it 
+	 * Tuple class is available from Tuple2 to Tuple22 based on number 	 */
+	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
@@ -23,25 +34,13 @@ public class Main {
 		Logger.getLogger("org.apache").setLevel(Level.WARN);
 		SparkConf conf = new SparkConf().setAppName("Jai Shri Krishna").setMaster("local[*]");
 		JavaSparkContext sc = new JavaSparkContext(conf);
-		JavaRDD<Integer> myRdd = sc.parallelize(inputData);
-
-		/*
-		 * While uncommenting this you "may or may not " get NotSerializableException
-		 * myRdd.foreach(System.out::println);
-		 * 
-		 * But definately it will throws in distributed environmnt Reason : Since
-		 * internally there is chances that ur system contains multiple cpu and in that
-		 * case whatever function we are passing to RDD it has to be distributed thus
-		 * Spark will expect that to be; implememted Seriaizable
-		 * 
-		 * thus to avoid this error we will take help of collect() which collect all the
-		 * RDD data in one collection
-		 */
-
-		myRdd.collect().forEach(System.out::println);
-
-		JavaRDD<Double> sqrtRdd = myRdd.map(value -> Math.sqrt(value));
-
+		JavaRDD<Integer> actualRdd = sc.parallelize(inputData);
+		
+		
+		JavaRDD<Tuple2<Integer,Double>> combinedRdd = actualRdd.map(value-> new Tuple2<>(value,Math.sqrt(value)));
+        
+		
+		
 		sc.close();
 
 	}
