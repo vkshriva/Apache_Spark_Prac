@@ -1,11 +1,13 @@
 package com.virtualpairprogrammers;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -14,9 +16,16 @@ import scala.Tuple2;
 
 public class Main {
 
+	/*
+	 * FlatMap ->Given a single value 0 or more output is given Map->One value
+	 * exactly 1 output
+	 */
+
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-
+		/*
+		 * Split all the sentences into a single words
+		 */
 		List<String> inputData = new ArrayList<>();
 		inputData.add("WARN: Tuesday 4 September 0405");
 		inputData.add("ERROR: Tuesday 4 September 0408");
@@ -26,45 +35,26 @@ public class Main {
 
 		Logger.getLogger("org.apache").setLevel(Level.WARN);
 
-		SparkConf conf = new SparkConf().setAppName("PairRDD").setMaster("local[*]");
-		JavaSparkContext sc = new JavaSparkContext(conf);
-
-		JavaRDD<String> orignlRdd = sc.parallelize(inputData);
+		SparkConf conf = new SparkConf().setAppName("FlatMapAndFilter").setMaster("local[*]");
+		JavaSparkContext sctxt = new JavaSparkContext(conf);
 
 		/*
-		 * Java PairRDD store data as key value pair is not similar to Map it allows
-		 * duplicate key
+		 * Since FlatMap return Iterator<Object> Thus converting String[] to list and
+		 * call Iterator method
 		 */
-		JavaPairRDD<String, String> pairRdd = orignlRdd.mapToPair(rawData -> {
-			String content[] = rawData.split(":");
-			return new Tuple2<>(content[0], content[1]);
-		});
 
-		JavaPairRDD<String, Long> modifyPairRdd = pairRdd.mapToPair(rawData -> {
-			return new Tuple2<>(rawData._1, 1L);
-		});
-
-		JavaPairRDD<String, Long> resultPairRdd = modifyPairRdd.reduceByKey((val1, val2) -> val1 + val2);
-
-		resultPairRdd.collect().forEach(rawData -> {
-			System.out.println(rawData._1 + ": has " + rawData._2 + " lines");
-		});
-
-		System.out.println("******In One go****************************");
-
-		sc.parallelize(inputData).mapToPair(rawdata -> new Tuple2<String, Long>(rawdata.split(":")[0], 1L))
-				.reduceByKey((val1, val2) -> val1 + val2).collect().forEach(rawData -> {
-					System.out.println(rawData._1 + ": has " + rawData._2 + " lines");
-				});
-
-		/*
-		 * GroupBy can lead to severe perfommance problem .Avoid unless you are sure
-		 * there is no better alternative
-		 */
-      System.out.println("**************Using Group By************");
+		sctxt.parallelize(inputData).flatMap(rawdata -> Arrays.asList(rawdata.split(" ")).iterator()).collect()
+				.forEach(System.out::println);
 		
-		sc.close();
+		System.out.println("*********************Using Filter********************");
 
+		/*
+		 * Filter is used to filter some data .Collect only thode whose word is greater than 1
+		 */
+		sctxt.parallelize(inputData).flatMap(rawdata -> Arrays.asList(rawdata.split(" ")).iterator())
+				.filter(word -> word.length() > 1).collect().forEach(System.out::println);
+      
+		sctxt.close();
 	}
 
 }
