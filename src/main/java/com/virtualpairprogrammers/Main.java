@@ -27,36 +27,65 @@ public class Main {
 		JavaSparkContext sc = new JavaSparkContext(conf);
 
 		JavaRDD<String> initialResource = sc.textFile("src/main/resources/subtitles/input.txt");
-		
-		
-	
-		/*
-		 * flatten each sentence
-		 */
-		JavaRDD<String> sentences = initialResource.flatMap(rawData -> Arrays.asList(rawData.split(" ")).iterator());
-		
-		
-	/*	
-		 * Removes integer and special character . Only String will be there in RDD. no integer 
-		 
-		JavaRDD<String>sentencesOnlyWord = sentences.filter((sentence->{
-		    Pattern pattern = Pattern.compile("[a-zA-Z]");
-		    pattern.matches(pattern, sentence);
-			
-		}));*/
-		
-		
-		
-		sentences.filter(Util::isNotBoring)
+
+		JavaRDD<String> tempResource = initialResource.map(text -> text.replaceAll("[^a-zA-z\\s]", "").toLowerCase());
+
+		JavaRDD<String> sentences = tempResource.flatMap(rawData -> Arrays.asList(rawData.split(" ")).iterator());
+
+		JavaRDD<String> removeblankLines = sentences.filter(sentenc -> sentenc.trim().length() > 0);
+
+		JavaPairRDD<Long, String> finalAnswer = removeblankLines.filter(Util::isNotBoring)
 				.mapToPair(word -> new Tuple2<String, Long>(word, 1L))
 				.reduceByKey((val, val2) -> val.longValue() + val2.longValue())
-				.mapToPair(tuple->new Tuple2<Long,String>(tuple._2,tuple._1))
-				.sortByKey(false)
-				.collect().forEach(tuple -> {
-					System.out.println(tuple._1 + ": " + tuple._2);
-				});
-		 /* .collect() .forEach(System.out::println);*/
-		 
+				.mapToPair(tuple -> new Tuple2<Long, String>(tuple._2, tuple._1)).sortByKey(false);
+
+		/*
+		 * Issue with foreach() not forEach
+		 * 
+		 * finalAnswer.foreach(tuple -> { System.out.println(tuple); });
+		 * 
+		 * The out will not be in sorted order.Actually it doesn't mean it is not sorted
+		 * .But it is exceptional with foreach()
+		 * 
+		 * Reason is -> Some says becoz our data is in partition thus it will be sorted
+		 * in within partion But actually it is beco of multhithreading .foreach runs in
+		 * multiple thread mode and it is not guarantee which thread will print data.
+		 * Thus it will show u not sorted form This issue will occurs only with foreach.
+		 * 
+		 * To solve this issue one solution can be Coalesc
+		 * 
+		 * Coalesc is the way to reduce the partition ,Here u make partiotion to only 1
+		 * .As a result u will get correct value in foreach.But again it is risky as if
+		 * data is more u will get outof memory exception
+		 * 
+		 * or u can use collect()
+		 * 
+		 * or take()
+		 */
+
+		/*
+		 * How to know number o partion is done by ApacheSpark
+		 */
+		int partion = finalAnswer.getNumPartitions(); // Answer is 2
+		System.out.println("Partition is " + partion);
+
+		finalAnswer = finalAnswer.coalesce(1);
+
+		System.out.println("Partition after coalesc is " + finalAnswer.getNumPartitions());
+
+		/*
+		 * take(number of element u want from top)
+		 */
+
+		List<Tuple2<Long, String>> ans = finalAnswer.take(10); // gives top 10 element
+
+		ans.forEach(System.out::println);
+
+		System.out.println("*******************************************");
+
+		finalAnswer.collect().forEach(tuple -> {
+			System.out.println(tuple);
+		});
 
 		sc.close();
 
