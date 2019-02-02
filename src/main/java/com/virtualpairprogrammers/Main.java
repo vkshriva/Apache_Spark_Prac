@@ -3,6 +3,7 @@ package com.virtualpairprogrammers;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -16,45 +17,49 @@ import scala.Tuple2;
 
 public class Main {
 
-	/*
-	 * FlatMap ->Given a single value 0 or more output is given Map->One value
-	 * exactly 1 output
-	 */
-
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		/*
-		 * Split all the sentences into a single words
-		 */
-		List<String> inputData = new ArrayList<>();
-		inputData.add("WARN: Tuesday 4 September 0405");
-		inputData.add("ERROR: Tuesday 4 September 0408");
-		inputData.add("FATAL: Wednesday 5 September 1632");
-		inputData.add("ERROR: Friday 7 September 1854");
-		inputData.add("WARN: Saturday 8 September 1942");
 
+		System.setProperty("hadoop.home.dir", "C:\\Users\\shrva02\\Documents\\software\\winutils-extra\\hadoop");
 		Logger.getLogger("org.apache").setLevel(Level.WARN);
 
-		SparkConf conf = new SparkConf().setAppName("FlatMapAndFilter").setMaster("local[*]");
-		JavaSparkContext sctxt = new JavaSparkContext(conf);
+		SparkConf conf = new SparkConf().setAppName("Boring Exercise..").setMaster("local[*]");
+		JavaSparkContext sc = new JavaSparkContext(conf);
 
-		/*
-		 * Since FlatMap return Iterator<Object> Thus converting String[] to list and
-		 * call Iterator method
-		 */
-
-		sctxt.parallelize(inputData).flatMap(rawdata -> Arrays.asList(rawdata.split(" ")).iterator()).collect()
-				.forEach(System.out::println);
+		JavaRDD<String> initialResource = sc.textFile("src/main/resources/subtitles/input.txt");
 		
-		System.out.println("*********************Using Filter********************");
-
+		
+	
 		/*
-		 * Filter is used to filter some data .Collect only thode whose word is greater than 1
+		 * flatten each sentence
 		 */
-		sctxt.parallelize(inputData).flatMap(rawdata -> Arrays.asList(rawdata.split(" ")).iterator())
-				.filter(word -> word.length() > 1).collect().forEach(System.out::println);
-      
-		sctxt.close();
+		JavaRDD<String> sentences = initialResource.flatMap(rawData -> Arrays.asList(rawData.split(" ")).iterator());
+		
+		
+	/*	
+		 * Removes integer and special character . Only String will be there in RDD. no integer 
+		 
+		JavaRDD<String>sentencesOnlyWord = sentences.filter((sentence->{
+		    Pattern pattern = Pattern.compile("[a-zA-Z]");
+		    pattern.matches(pattern, sentence);
+			
+		}));*/
+		
+		
+		
+		sentences.filter(Util::isNotBoring)
+				.mapToPair(word -> new Tuple2<String, Long>(word, 1L))
+				.reduceByKey((val, val2) -> val.longValue() + val2.longValue())
+				.mapToPair(tuple->new Tuple2<Long,String>(tuple._2,tuple._1))
+				.sortByKey(false)
+				.collect().forEach(tuple -> {
+					System.out.println(tuple._1 + ": " + tuple._2);
+				});
+		 /* .collect() .forEach(System.out::println);*/
+		 
+
+		sc.close();
+
 	}
 
 }
