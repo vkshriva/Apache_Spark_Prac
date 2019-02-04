@@ -27,36 +27,33 @@ public class Main {
 		JavaSparkContext sc = new JavaSparkContext(conf);
 
 		JavaRDD<String> initialResource = sc.textFile("src/main/resources/subtitles/input.txt");
-		
-		
-	
+
 		/*
-		 * flatten each sentence
+		 * Remove extra space and flatten the RDD
 		 */
-		JavaRDD<String> sentences = initialResource.flatMap(rawData -> Arrays.asList(rawData.split(" ")).iterator());
+		JavaRDD<String> breakBySpace = initialResource.filter(data -> data.trim().length() > 0)
+				.flatMap(data -> Arrays.asList(data.split(" ")).iterator());
+   
+		/*
+		 * Only String is expected
+		 */
+		
+		JavaRDD<String> sentence= breakBySpace.filter(data->data.matches("^[a-zA-Z]*$"));
+		
+		JavaPairRDD<String,Integer> countedPairRDD= sentence.filter(Util::isNotBoring)
+		.mapToPair(word->new Tuple2<String,Integer>(word,1))
+		.reduceByKey((val1,val2)->val1.intValue()+val2.intValue());		
+
+	    /*
+	     * Key as counted value
+	     */
+		
+		countedPairRDD.mapToPair(tuple->new Tuple2<Integer,String>(tuple._2,tuple._1))
+		.sortByKey(false)
+		.collect().forEach(tuple -> { System.out.println(tuple._1 + ": " + tuple._2);});
 		
 		
-	/*	
-		 * Removes integer and special character . Only String will be there in RDD. no integer 
-		 
-		JavaRDD<String>sentencesOnlyWord = sentences.filter((sentence->{
-		    Pattern pattern = Pattern.compile("[a-zA-Z]");
-		    pattern.matches(pattern, sentence);
-			
-		}));*/
 		
-		
-		
-		sentences.filter(Util::isNotBoring)
-				.mapToPair(word -> new Tuple2<String, Long>(word, 1L))
-				.reduceByKey((val, val2) -> val.longValue() + val2.longValue())
-				.mapToPair(tuple->new Tuple2<Long,String>(tuple._2,tuple._1))
-				.sortByKey(false)
-				.collect().forEach(tuple -> {
-					System.out.println(tuple._1 + ": " + tuple._2);
-				});
-		 /* .collect() .forEach(System.out::println);*/
-		 
 
 		sc.close();
 
