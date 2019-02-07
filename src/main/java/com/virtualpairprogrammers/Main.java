@@ -3,12 +3,12 @@ package com.virtualpairprogrammers;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -23,72 +23,48 @@ public class Main {
 		System.setProperty("hadoop.home.dir", "C:\\Users\\shrva02\\Documents\\software\\winutils-extra\\hadoop");
 		Logger.getLogger("org.apache").setLevel(Level.WARN);
 
-		SparkConf conf = new SparkConf().setAppName("Boring Exercise..").setMaster("local[*]");
-		JavaSparkContext sc = new JavaSparkContext(conf);
+		SparkConf conf = new SparkConf().setAppName("Join example").setMaster("local[*]");
+		JavaSparkContext sContext= new  JavaSparkContext(conf);
+		
+		List<Tuple2<Integer,Integer>> visits = new ArrayList<>();
+		visits.add(new Tuple2<>(4,18));
+		visits.add(new Tuple2<>(6,4));
+		visits.add(new Tuple2<>(10,9));
+		
+		List<Tuple2<Integer,String>> users = new ArrayList<>();
+		users.add(new Tuple2<>(1,"John"));
+		users.add(new Tuple2<>(2,"Bob"));
+		users.add(new Tuple2<>(3,"Desh"));
+		users.add(new Tuple2<>(4,"Mash"));
+		users.add(new Tuple2<>(5,"Tahs"));
+		users.add(new Tuple2<>(6,"Sash"));
+		
+		JavaPairRDD<Integer, Integer> visitsData=sContext.parallelizePairs(visits);
+		JavaPairRDD<Integer, String> userData=sContext.parallelizePairs(users);
+		
+		
+		JavaPairRDD<Integer,Tuple2<Integer,String>> innerJoin= visitsData.join(userData);
+				
+		innerJoin.collect().forEach(System.out::println);
+		
+		
+		 JavaPairRDD<Integer, Tuple2<Integer, org.apache.spark.api.java.Optional<String>>> leftJoin =visitsData.leftOuterJoin(userData);
 
-		JavaRDD<String> initialResource = sc.textFile("src/main/resources/subtitles/input.txt");
-
-		JavaRDD<String> tempResource = initialResource.map(text -> text.replaceAll("[^a-zA-z\\s]", "").toLowerCase());
-
-		JavaRDD<String> sentences = tempResource.flatMap(rawData -> Arrays.asList(rawData.split(" ")).iterator());
-
-		JavaRDD<String> removeblankLines = sentences.filter(sentenc -> sentenc.trim().length() > 0);
-
-		JavaPairRDD<Long, String> finalAnswer = removeblankLines.filter(Util::isNotBoring)
-				.mapToPair(word -> new Tuple2<String, Long>(word, 1L))
-				.reduceByKey((val, val2) -> val.longValue() + val2.longValue())
-				.mapToPair(tuple -> new Tuple2<Long, String>(tuple._2, tuple._1)).sortByKey(false);
-
-		/*
-		 * Issue with foreach() not forEach
-		 * 
-		 * finalAnswer.foreach(tuple -> { System.out.println(tuple); });
-		 * 
-		 * The out will not be in sorted order.Actually it doesn't mean it is not sorted
-		 * .But it is exceptional with foreach()
-		 * 
-		 * Reason is -> Some says becoz our data is in partition thus it will be sorted
-		 * in within partion But actually it is beco of multhithreading .foreach runs in
-		 * multiple thread mode and it is not guarantee which thread will print data.
-		 * Thus it will show u not sorted form This issue will occurs only with foreach.
-		 * 
-		 * To solve this issue one solution can be Coalesc
-		 * 
-		 * Coalesc is the way to reduce the partition ,Here u make partiotion to only 1
-		 * .As a result u will get correct value in foreach.But again it is risky as if
-		 * data is more u will get outof memory exception
-		 * 
-		 * or u can use collect()
-		 * 
-		 * or take()
-		 */
-
-		/*
-		 * How to know number o partion is done by ApacheSpark
-		 */
-		int partion = finalAnswer.getNumPartitions(); // Answer is 2
-		System.out.println("Partition is " + partion);
-
-		finalAnswer = finalAnswer.coalesce(1);
-
-		System.out.println("Partition after coalesc is " + finalAnswer.getNumPartitions());
-
-		/*
-		 * take(number of element u want from top)
-		 */
-
-		List<Tuple2<Long, String>> ans = finalAnswer.take(10); // gives top 10 element
-
-		ans.forEach(System.out::println);
-
-		System.out.println("*******************************************");
-
-		finalAnswer.collect().forEach(tuple -> {
-			System.out.println(tuple);
-		});
-
-		sc.close();
-
+		 leftJoin.collect().forEach(System.out::println);
+		
+		 System.out.println("*******************************");
+		 JavaPairRDD<Integer, Tuple2<org.apache.spark.api.java.Optional<Integer>, String>> rightOuterJoin =visitsData.rightOuterJoin(userData);
+		 
+		 /*
+		  * Traversing Optional Element in lame way .There will be some other way as well 
+		  */
+		 
+		 rightOuterJoin.collect().forEach(tuple->{
+			 System.out.println("UserID: "+tuple._1.intValue()+", No of visits: "+tuple._2._1.orElse(0)+", UserName is: "+tuple._2._2);
+		 });
+		 
+		 System.out.println("***********************************");
+	     rightOuterJoin.collect().forEach(System.out::println);
 	}
 
 }
