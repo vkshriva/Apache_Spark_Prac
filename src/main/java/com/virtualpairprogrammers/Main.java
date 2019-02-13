@@ -3,6 +3,7 @@ package com.virtualpairprogrammers;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Level;
@@ -53,7 +54,13 @@ public class Main {
 		.collect().forEach(tuple -> { System.out.println(tuple._1 + ": " + tuple._2);});
 		
 		
+		/*
+		 * To run WEBUI u have to keep server/prog running so that if u hit localhost:4040  u can see Explain plan 
+		 */
 		
+		Scanner kb = new Scanner(System.in);
+		
+     	  kb.next();
 
 		sc.close();
 
