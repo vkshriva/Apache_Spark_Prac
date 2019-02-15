@@ -2,12 +2,16 @@ package com.virtualpairprogrammers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaSparkContext;import parquet.org.apache.thrift.TUnion;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.storage.StorageLevel;
+
+import parquet.org.apache.thrift.TUnion;
 import scala.Tuple2;
 
 /**
@@ -27,7 +31,9 @@ public class ViewingFigures {
 		boolean testMode = false;
 
 		JavaPairRDD<Integer, Integer> viewData = setUpViewDataRdd(sc, testMode);
+		viewData = viewData.persist(StorageLevel.MEMORY_AND_DISK());
 		JavaPairRDD<Integer, Integer> chapterData = setUpChapterDataRdd(sc, testMode);
+		chapterData = chapterData.persist(StorageLevel.MEMORY_AND_DISK());
 	    JavaPairRDD<Integer, String> titlesData = setUpTitlesDataRdd(sc, testMode);
 
 		JavaPairRDD<Integer, Integer> numberOfChapterinCourseRDD = chapterData
@@ -94,6 +100,12 @@ public class ViewingFigures {
 		
 		JavaPairRDD<String,Integer> finalDataWithName = mergeWithTitle.mapToPair(tuple->new Tuple2<>(tuple._2._1,tuple._2._2));
 		finalDataWithName.collect().forEach(System.out::println);
+		
+		
+		Scanner kb = new Scanner(System.in);
+		
+			kb.nextLine();	
+		
 		sc.close();
 	}
 
