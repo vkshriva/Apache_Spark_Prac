@@ -60,13 +60,39 @@ public class Main {
 		 * hai.Or naam aisse auhaa bana diya koi hadd nahi
 		 */
 		Dataset<Row> countdataset = spark.sql("select level,count(date) from logging group by level order by level");
-
 		countdataset.show();
 
 		Dataset<Row> collectListdataset = spark
 				.sql("select level,collect_list(date) from logging group by level order by level");
-
 		collectListdataset.show();
+
+		/*
+		 * Changing in dateFormat
+		 */
+		Dataset<Row> dateFormatSet = spark.sql("select level,date_format(date,'MMMM')as month from logging");
+
+		dateFormatSet.show();
+
+		/*
+		 * Part 2 Based on each Month u have to give a count
+		 */
+
+		// Dataset<Row> testDataSet2 = spark.createDataFrame(inMemory, schema);
+
+		Dataset<Row> testDataSet2 = spark.read().option("header", true).csv("src/main/resources/biglog.txt");
+
+		testDataSet2.createOrReplaceTempView("LogData");
+
+		Dataset<Row> countNumberOfLevelInEachMnth = spark.sql(
+				"select level,date_format(datetime,'MMMM')as month,count(1)as Total from LogData group by level ,month");
+
+		/*
+		 * If you want to see more than 20 rows
+		 */
+
+		countNumberOfLevelInEachMnth.show(false); // this won't work becoz it work in column level .Not row level
+		countNumberOfLevelInEachMnth.show(100);
+
 		spark.close();
 
 	}
