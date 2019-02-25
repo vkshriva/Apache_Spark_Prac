@@ -42,43 +42,12 @@ public class Main {
 				.getOrCreate();
 
 		Dataset<Row> dataset = spark.read().option("header", true).csv("src/main/resources/exams/students.csv");
-
-		dataset.show();
-
-		/*
-		 * if u use it it will complain exception tht score is not numberic type By
-		 * Default every column is string Dataset<Row> aggregation1 =
-		 * dataset.groupBy("subject").max("score");
-		 * 
-		 */
-
-		Column scoreCols = dataset.col("score");
-		/*
-		 * It should work but for now it is noot working . May be later version it will
-		 * start Dataset<Row> aggregation1 =
-		 * dataset.groupBy(scoreCols.cast(DataTypes.IntegerType));
-		 */
-
-		/*
-		 * RelationGroupDataset gives u agg() which can be used for aggregation
-		 */
-
-		Dataset<Row> aggregation1 = dataset.groupBy(functions.col("subject"))
-				.agg(functions.max(functions.col("score").cast(DataTypes.IntegerType)));
-		aggregation1.show();
-
-		/*
-		 * Using functions class with static import and agg can except any number of
-		 * expression so adding minimum score as well
-		 * 
-		 */
-
-		aggregation1 = dataset.groupBy(col("subject")).agg(
-				max(col("score").cast(DataTypes.IntegerType)).alias("MaxNumber"),
-				min(col("score").cast(DataTypes.IntegerType)).alias("MinNumber"));
-
-		aggregation1.show();
-
+       
+	    dataset.show();
+		Dataset<Row> result = dataset.groupBy(col("subject")).pivot(col("year")).agg(round(avg(col("score")),2).alias("AverageMarks"),
+				                                                                     max(col("score")));
+		result.show();
+	
 		spark.close();
 
 	}
