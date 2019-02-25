@@ -19,6 +19,7 @@ import org.apache.spark.sql.RelationalGroupedDataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.catalog.Database;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -36,55 +37,47 @@ public class Main {
 		System.setProperty("hadoop.home.dir", "C:\\Users\\shrva02\\Documents\\software\\winutils-extra\\hadoop");
 		Logger.getLogger("org.apache").setLevel(Level.WARN);
 
-		SparkSession spark = SparkSession.builder().appName("PivotObject").master("local[*]")
+		SparkSession spark = SparkSession.builder().appName("MoreOnAggregation").master("local[*]")
 				.config("spark.sql.warehouse.dir", "file///C:/Users/shrva02/Documents/ApacheSpark Prac/tmp")
 				.getOrCreate();
 
-		Dataset<Row> testDataSet2 = spark.read().option("header", true).csv("src/main/resources/biglog.txt");
+		Dataset<Row> dataset = spark.read().option("header", true).csv("src/main/resources/exams/students.csv");
 
-		testDataSet2.createOrReplaceTempView("LogData");
-
-		Dataset<Row> dataset = spark.sql("select level,date_format(datetime,'MMMM')as month  from LogData");
-
-		// dataset.show();
+		dataset.show();
 
 		/*
-		 * PivotTable : Pivot table is helpful when you wanted to do grouping with 2
-		 * columns .Here once is level second is Month
+		 * if u use it it will complain exception tht score is not numberic type By
+		 * Default every column is string Dataset<Row> aggregation1 =
+		 * dataset.groupBy("subject").max("score");
 		 * 
 		 */
 
-		Dataset<Row> pivotDataset = dataset.groupBy("level").pivot("month").count();
-
-		pivotDataset.show(100);
+		Column scoreCols = dataset.col("score");
 		/*
-		 * Now here Columns are not arranged in month order . In that case u can take
-		 * help of List<Object> columns
+		 * It should work but for now it is noot working . May be later version it will
+		 * start Dataset<Row> aggregation1 =
+		 * dataset.groupBy(scoreCols.cast(DataTypes.IntegerType));
 		 */
 
-		Object month[] = new Object[] { "January", "February", "March", "April", "May", "June", "July", "August",
-				"September", "October", "November", "December" };
-		List<Object> columns = Arrays.asList(month);
-
-		Dataset<Row> pivotDatasetWithColumn = dataset.groupBy("level").pivot("month", columns).count();
-
-		pivotDatasetWithColumn.show(100);
-
 		/*
-		 * In case any Month data is not available it will come as null
+		 * RelationGroupDataset gives u agg() which can be used for aggregation
 		 */
 
-		Object month2[] = new Object[] { "January", "February", "March", "April", "May", "June", "July", "August",
-				"September", "October", "November", "December", "DummyMonth" };
-		List<Object> columns2 = Arrays.asList(month2);
+		Dataset<Row> aggregation1 = dataset.groupBy(functions.col("subject"))
+				.agg(functions.max(functions.col("score").cast(DataTypes.IntegerType)));
+		aggregation1.show();
 
-		Dataset<Row> pivotDatasetWithColumn2 = dataset.groupBy("level").pivot("month", columns2).count();
+		/*
+		 * Using functions class with static import and agg can except any number of
+		 * expression so adding minimum score as well
+		 * 
+		 */
 
-		pivotDatasetWithColumn2.show(100);
+		aggregation1 = dataset.groupBy(col("subject")).agg(
+				max(col("score").cast(DataTypes.IntegerType)).alias("MaxNumber"),
+				min(col("score").cast(DataTypes.IntegerType)).alias("MinNumber"));
 
-		Dataset<Row> pivotDatasetWithColumn3 = dataset.groupBy("level").pivot("month", columns2).count().na().fill(0);
-
-		pivotDatasetWithColumn3.show(100);
+		aggregation1.show();
 
 		spark.close();
 
