@@ -43,12 +43,29 @@ public class Main {
 
 		Dataset<Row> dataset = spark.read().option("header", true).csv("src/main/resources/exams/students.csv");
        
-	    dataset.show();
-		Dataset<Row> result = dataset.groupBy(col("subject")).pivot(col("year")).agg(round(avg(col("score")),2).alias("AverageMarks"),
-				                                                                     max(col("score")));
-		result.show();
-	
-		spark.close();
+	    /*
+	     * Let say u want to create a column .ie pass column where only A+ student will get pass mark.
+	     * lit is method of functionals class and its meaning is literal .
+	     * BUt it won't work for complex requiremnt
+	     * 
+	     * withColumn helps to add new column firs t parameter will take colName and another one literal
+	     * 
+	     */
+		
+		Dataset<Row> datasetUsingLiteral = dataset.withColumn("pass_status", lit(col("grade").equalTo("A+")));
+		datasetUsingLiteral.show();
+		
+		/* Using udf(user defined Function)
+		 * 
+		 */
+        
+		spark.udf().register("myUDF",(grade)->grade.equals("A+"),DataTypes.BooleanType);
+		
+		Dataset<Row> datasetUsingLambdaAndUDF = dataset.withColumn("pass_Status", callUDF("myUDF", col("grade")));
+		
+		datasetUsingLambdaAndUDF.show();
+		
+		spark.close(); 
 
 	}
 
